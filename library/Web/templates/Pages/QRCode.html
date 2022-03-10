@@ -1,0 +1,278 @@
+{% extends "templates/navigation.html" %}
+{% load static %}
+{% block title %} AHNU图书馆助手-快速预约{%endblock%}
+{%block css_block%}
+
+<style>
+    .distext {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-size: larger;
+        font-weight: bold;
+    }
+
+    .center_css {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .nodisplay {
+        display: none;
+    }
+
+    .whitebackground[readonly] {
+        background-color: #FFFFFF;
+    }
+
+    .error_color {
+        color: #DC3545;
+    }
+
+    .check_color {
+        color: #198754;
+    }
+
+    #tip {
+        color: #6C757C;
+        font-size: smaller;
+    }
+
+    #tip_bottom {
+        color: #6C757C;
+        font-size: smaller;
+    }
+
+    #tip_bottom_2 {
+        color: #6C757C;
+        font-size: smaller;
+    }
+</style>
+
+{%endblock css_block%}
+
+{% block body_content%}
+
+
+<div class="container">
+    <!-- 一直存在的警告栏 -->
+    <div class="alert alert-danger" role="alert">
+        目前服务器中积累的签到二维码数量较少,如果您想要实现自动签到功能,建议您上传您预期座位的签到二维码。
+    </div>
+    <!-- 警告栏 -->
+    {% if have_alert%}
+    {% if is_warn %}
+    <div class="alert alert-warning" role="alert">
+        {{message}}
+    </div>
+    {% else %}
+    <div class="alert alert-primary" role="alert">
+        {{message}}
+    </div>
+    {% endif%}
+    {% endif %}
+
+    <!-- 检查座位预约 -->
+    <p class="distext">查询座位是否支持自动签到</p>
+    <div class="input-group mb-3">
+        <input id="search_input" type="text" class="form-control" placeholder="输入座位号" aria-label="输入座位号"
+            aria-describedby="button-addon2" autocomplete="off">
+        <button id="seatname_check" class="search_button btn btn-outline-secondary" type="button" id="upload" disabled>
+            <i id="seatname_display" class="bi bi-exclamation-square-fill error_color"></i>
+            查询
+        </button>
+    </div>
+    <div id="tip"></div>
+    <div id="loading" class="distext visually-hidden">
+        <div class="spinner-border" role="status"></div>
+        <span>正在查询...</span>
+    </div>
+
+    <div id="success" class="distext visually-hidden">
+        <i class="bi bi-check2"></i>
+        <span>该座位查询成功,允许自动签到</span>
+    </div>
+
+    <div id="fail" class="distext visually-hidden">
+        <i class="bi bi-exclamation-lg"></i>
+        <span>不允许自动签到</span>
+    </div>
+
+    <div id="network" class="distext visually-hidden">
+        <i class="bi bi-wifi-off"></i>
+        <span>不允许自动签到自动签到</span>
+    </div>
+
+    <hr>
+
+    <!-- 二维码上传 -->
+    <form action="" onsubmit="return submit_img()" method="post" enctype="multipart/form-data">
+        {% csrf_token %}
+        <div class='block'>
+            <p class="distext">上传二维码图片</p>
+
+        </div>
+        <div class='block'>
+            <div class="input-group mb-3 row">
+                <div class="col-3">二维码</div>
+                <div class="col-8">{{form.file}}</div>
+                <div class="col-1 center_css">
+                    <div id="img_upload_logo_loading" class="visually-hidden">
+                        <div class="spinner-border spinner-border-sm" role="status">
+                        </div>
+
+                    </div>
+                    <div id="img_upload_logo_timeout" class="visually-hidden">
+                        <i class="bi bi-wifi-off"></i>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+        <div class="center_css">
+            <input id="upload_sub" type="submit" class="btn btn-lg btn-outline-success">
+            </input>
+        </div>
+        <div id="tip_bottom"></div>
+        <div id="tip_bottom_2"></div>
+    </form>
+    <hr>
+
+    <!-- 二维码历史记录 -->
+    {% autoescape off %}
+    <p class="distext">可用的签到二维码</p>
+    <div>
+        <div class="list-group">
+            <div disable class="list-group-item list-group-item-action">
+                <div class="row">
+                    <div class="col-2 center_css">座位</div>
+                    <div class="col-5 center_css">上传时间</div>
+                    <div class="col-2 center_css">可用</div>
+                    <div class="col-3 center_css">备注</div>
+                </div>
+            </div>
+            {% for i in qrcode_record%}
+            <div function_flag="{{i}}" class="list-group-item list-group-item-action">
+                <div class="row">
+                    <div class="col-2 center_css">{{i.seatname}}</div>
+                    <div class="col-5 center_css">{{i.creat_time}}</div>
+                    {% if i.isable %}
+                    <div class="col-2 center_css">√</div>
+                    {% else %}
+                    <div class="col-2 center_css">×</div>
+                    {% endif %}
+                    <div class="col-3 center_css">{{i.note}}</div>
+
+                </div>
+            </div>
+
+            {% empty %}
+            <div class="list-group-item list-group-item-action">
+                <div class="center_css">空空如也</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    {% endautoescape %}
+
+
+
+
+</div>
+<script type="text/javascript" src="{% static '/seatlist.js' %}"></script>
+<script>
+    // 限制图片大小
+    function upLoad_img(){
+        
+    }
+
+
+    // 按钮防止重复点击,上传按钮,请求成功界面会刷新,超时界面将会显示提示
+   function submit_img() {
+        var file = document.getElementById('formFile').files;
+        if(file.length > 1){
+            // 限制单个文件
+            $("#tip_bottom_2").html("只能选择一个文件")
+            return false
+        }
+        else if(file[0].size / 1024 > 10240){
+            // 限制文件大小10M
+            $("#tip_bottom_2").html("文件过大（图片文件应该<10MB）")
+            return false
+        }
+        $('#upload_sub').attr("disabled",true)
+        $('#img_upload_logo_loading').removeClass("visually-hidden")
+        $('#img_upload_logo_timeout').addClass("visually-hidden")
+        setTimeout(function () {
+            $('#upload_sub').attr("disabled","")
+            $('#img_upload_logo_loading').addClass("visually-hidden")
+            $('#img_upload_logo_timeout').removeClass("visually-hidden")
+        }, 7000);
+    }
+
+    // 查询按钮-实时检查座位号输入正确性
+    $("#search_input").bind("input propertychange", function (event) {
+        var value = $("#search_input").val();
+        if (Check_SeatName(value) == -1) {
+            // 未查到
+            $("#seatname_display").removeClass("check_color");
+            $("#seatname_display").removeClass("bi-check-square-fill");
+            $("#seatname_display").addClass("error_color");
+            $("#seatname_display").addClass("bi-exclamation-square-fill");
+            $("#seatname_check").attr("disabled", "disabled");
+            $("#tip").html("座位号错误,注意使用小写字符")
+        }
+        else {
+            // 查到
+            $("#seatname_display").addClass("check_color");
+            $("#seatname_display").addClass("bi-check-square-fill");
+            $("#seatname_display").removeClass("error_color");
+            $("#seatname_display").removeClass("bi-exclamation-square-fill");
+            $("#seatname_check").removeAttr("disabled");
+            $("#tip").html("")
+
+        }
+    });
+
+    // 请求获取座位情况
+    $('.search_button').click(function (e) {
+        $("[id='success']").addClass("visually-hidden")
+        $("[id='fail']").addClass("visually-hidden")
+        $("[id='network']").addClass("visually-hidden")
+
+        var url = '../searchseat/';
+        var getseatname = $("input[id='search_input']").val();
+        if (getseatname != 0) {
+            $("[id='loading']").removeClass("visually-hidden")
+            $.ajax({
+                url: "../searchseat/",  // 请求路径
+                type: "GET",            //请求方式
+                dataType: 'json',
+                data: {
+                    "seatname": getseatname
+                },
+                beforeSend: function (data) {
+                    $('#seatname_check').attr("disabled", true)
+                },
+                success: function (data) {
+                    $("[id='loading']").addClass("visually-hidden")
+                    if (data.able) {
+                        $("[id='success']").removeClass("visually-hidden")
+                    }
+                    else {
+                        $("[id='fail']").removeClass("visually-hidden")
+                    }
+                },
+                error: function () {
+                    $("[id='network']").removeClass("visually-hidden")
+                },
+                complete: function (data) {
+                    $('#seatname_check').removeAttr("disabled")
+                },
+                dataType: "json"//设置接受到的响应数据的格式 text 普通的文本字符串
+            });
+        }
+    });
+</script>
+{% endblock body_content%}

@@ -1,0 +1,298 @@
+{% extends "templates/navigation.html" %} 
+{% load static %}
+{% block title %} AHNU图书馆助手-定时预约{%endblock%} 
+
+
+{% block css_block %}
+<link rel="stylesheet" type="text/css" href="{% static 'clickpicker/dist/picker.min.css' %}">
+<style>
+    .deepbackground {
+        background-color: #F8F8F8;
+    }
+
+    .time_select[readonly] {
+        background-color: #ffffff;
+    }
+
+    .error_color {
+        color: #DC3545;
+    }
+
+    .check_color {
+        color: #198754;
+    }
+
+    #tip {
+        color: #6C757C;
+        font-size: smaller;
+    }
+</style>
+{%endblock css_block%}
+
+
+{% block body_content%}
+<div class="container">
+    <!-- 警告消息 -->
+    {% for item in warn_info%}
+    <div class="alert alert-warning" role="alert">
+        {{item}}
+    </div>
+    {% endfor%}
+    <div class="alert alert-primary" role="alert">
+        注意:“按周预约”将会在每天早上6:30预约下一天的所有任务,所以说如果您今天设定的定时任务包括明天的座位计划,那么明天将无法预约到座位。
+    </div>
+
+    <!-- 循环任务 -->
+    <div>
+        <div class="list-group">
+            {% for i in assignment_dict%}
+            {% if i.have_assignment %}
+            <button type="button" class="list-group-item list-group-item-action" data-bs-toggle="modal"
+                data-bs-target="#exampleModal" data-bs-whatever="{{i.weekday}}" assignment_info="{{i | safe}}">
+                <div>
+                    <h5 class="card-title">{{i.weekday}}(运行中)</h5>
+                    <div class="card-text">时间：{{i.start_time}}~{{i.end_time}}</div>
+                    <div class="card-text">座位号：{{i.seatname}}</div>
+                </div>
+            </button>
+            {% else %}
+            <button type="button" class="deepbackground list-group-item list-group-item-action" data-bs-toggle="modal"
+                data-bs-target="#exampleModal" data-bs-whatever="{{i.weekday}}" assignment_info="{{i | safe}}">
+                <div>
+                    <h5 class="card-title">{{i.weekday}}(无任务)</h5>
+                    <div class="card-text">时间：--</div>
+                    <div class="card-text">座位号：--</div>
+                </div>
+            </button>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+
+
+    {% if wxenable %}
+    <!-- 弹窗-验证微信 -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="exampleModalLabel" value=""></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form action="" method="post">
+                        {% csrf_token %}
+                        <input id="title_week" name="title_week" type="hidden" value="">
+                        <div class="container">
+                            <div class="distext">开始时间:</div>
+                            <div class="center_css row">
+                                <div class="col-5">
+                                    <div class="input-group clockpicker">
+                                        <input name="begintime" type="text"
+                                            class="form-control js-time-picker time_select" value="" autocomplete="off"
+                                            required>
+                                        <span class="input-group-text bi bi-clock"></span>
+                                    </div>
+                                </div>
+
+                            </div>
+                            <div class="distext">结束时间:</div>
+                            <div class="center_css row">
+
+                                <div class="col-5">
+                                    <div class="input-group clockpicker">
+                                        <input name="endtime" type="text"
+                                            class="form-control js-time-picker time_select" value="" autocomplete="off"
+                                            required>
+                                        <span class="input-group-text bi bi-clock"></span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="distext">座位号:</div>
+                            <div class="row input-group mb-3 ">
+                                <div class="col-11">
+                                    <input id="search_input" name="seatname" type="num" class="form-control"
+                                        aria-label="Text input with dropdown button" autocomplete="off" required>
+                                </div>
+                                <div class="col-1 center_css">
+                                    <i id="upload_logo" class="bi bi-exclamation-square-fill error_color"></i>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button id="delete_button" class="btn btn-danger" type="button"
+                                    onclick="assignment_delete()">删除</button>
+                                <button id="seatname_check" type="submit" class=" btn btn-primary" disabled>保存</button>
+                            </div>
+
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <!-- 弹窗-没有验证微信 -->
+    <div class="modal fade" id="exampleModal" tabindex="-1" aria-labelledby="exampleModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div>您的微信信息缺失,不允许“按周预约”</div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">关闭</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif%}
+
+   
+
+
+
+
+
+</div>
+
+
+
+  
+<script type="text/javascript" src="{% static 'clickpicker/dist/picker.min.js' %}"></script>
+<script type="text/javascript" src="{% static '/seatlist.js' %}"></script>
+<script type="text/javascript">
+    // 任务删除ajax
+    function assignment_delete() {
+        var title_week = document.getElementById('title_week')
+        var weekstr = title_week.getAttribute('value')
+        var weeknum = -1
+        if (weekstr === "周一") {
+            weeknum = 1;
+        }
+        else if (weekstr === "周二") {
+            weeknum = 2;
+        }
+        else if (weekstr === "周三") {
+            weeknum = 3;
+        }
+        else if (weekstr === "周四") {
+            weeknum = 4;
+        }
+        else if (weekstr === "周五") {
+            weeknum = 5;
+        }
+        else if (weekstr === "周六") {
+            weeknum = 6;
+        }
+        else if (weekstr === "周日") {
+            weeknum = 7;
+        }
+
+        else {
+            return;
+        }
+        $.ajax({
+            type: 'get',
+            url: '../deleteassignment/',
+            dataType: 'json',
+            data: {
+                'weeknum': weeknum
+            },
+            complete: function () {
+                location.reload(true)
+            },
+        });
+    };
+
+
+    // 查询按钮-实时检查座位号输入正确性
+    $("#search_input").bind("input propertychange", function (event) {
+        var value = $("#search_input").val();
+        if (Check_SeatName(value) == -1) {
+            // 未查到
+            $("#upload_logo").removeClass("check_color");
+            $("#upload_logo").removeClass("bi-check-square-fill");
+            $("#upload_logo").addClass("error_color");
+            $("#upload_logo").addClass("bi-exclamation-square-fill");
+            $("#seatname_check").attr("disabled", "disabled");
+            $("#tip").html("座位号错误,注意使用小写字符")
+        }
+        else {
+
+            // 查到
+            $("#upload_logo").addClass("check_color");
+            $("#upload_logo").addClass("bi-check-square-fill");
+            $("#upload_logo").removeClass("error_color");
+            $("#upload_logo").removeClass("bi-exclamation-square-fill");
+            $("#seatname_check").removeAttr("disabled");
+            $("#tip").html("")
+
+        }
+    });
+
+
+    // 时钟选择 开始-结束
+    new Picker(document.querySelector('[name = "begintime"]'), {
+        format: 'HH:mm',
+        headers: true,
+        text: {
+            title: '开始时间',
+        },
+    });
+    new Picker(document.querySelector('[name = "endtime"]'), {
+        format: 'HH:mm',
+        headers: true,
+        text: {
+            title: '结束时间',
+        },
+    });
+
+
+    // 模态窗设定值
+    var exampleModal = document.getElementById('exampleModal')
+    exampleModal.addEventListener('show.bs.modal', function (event) {
+        var button = event.relatedTarget;
+        var recipient = button.getAttribute('data-bs-whatever');
+        var assignment_info = button.getAttribute('assignment_info');
+        var modalTitle = exampleModal.querySelector('.modal-title');
+        var delete_button = document.getElementById('delete_button')
+        var set_begintime = document.getElementsByName('begintime')[0]
+        var set_endtime = document.getElementsByName('endtime')[0]
+        var set_seatname = document.getElementsByName('seatname')[0]
+        title_week.setAttribute("value", recipient);
+
+        assignment_info = assignment_info.replace(/\'/g, "\"")
+        assignment_info = assignment_info.replace(/True/g, "true")
+        assignment_info = assignment_info.replace(/False/g, "false")
+        assignment_info = JSON.parse(assignment_info);
+        modalTitle.textContent = recipient + '的定时任务';
+        if (assignment_info.have_assignment) {
+            // 存在任务,设定值 
+            set_begintime.setAttribute("value", assignment_info.start_time)
+            set_endtime.setAttribute("value", assignment_info.end_time)
+            set_seatname.setAttribute("value", assignment_info.seatname)
+            delete_button.disabled = false
+            $("#upload_logo").addClass("check_color");
+            $("#upload_logo").addClass("bi-check-square-fill");
+            $("#upload_logo").removeClass("error_color");
+            $("#upload_logo").removeClass("bi-exclamation-square-fill");
+            $("#seatname_check").removeAttr("disabled");
+            $("#tip").html("")
+
+        }
+        else {
+            // 不存在任务,设定删除键不可用
+            set_begintime.setAttribute("value", "")
+            set_endtime.setAttribute("value", "")
+            set_seatname.setAttribute("value", "")
+            delete_button.disabled = true
+        }
+    })
+</script>
+
+
+
+{%endblock body_content%}

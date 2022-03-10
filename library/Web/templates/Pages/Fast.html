@@ -1,0 +1,456 @@
+{% extends "templates/navigation.html" %}
+{% load static %}
+{% block title %} AHNU图书馆助手-快速预约{%endblock%}
+{%block css_block%}
+
+<style>
+    .distext {
+        padding-top: 10px;
+        padding-bottom: 10px;
+        font-size: larger;
+        font-weight: bold;
+    }
+
+    .center_css {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .border_submit {
+        padding-top: 20px;
+        padding-bottom: 20px;
+    }
+
+    .history_list {
+        padding-bottom: 20px;
+    }
+    .time_select[readonly]{
+        background-color: #ffffff;     
+    }
+
+    .error_color {
+        color: #DC3545;
+    }
+    .check_color{
+        color:#198754;
+    }
+    #tip{
+        color: #6C757C;
+        font-size: smaller;
+    }
+    #scroll_height{
+        position: relative;
+        height:200px;
+        overflow:auto;
+    }
+</style>
+
+<!-- ClockPicker Stylesheet -->
+
+<link rel="stylesheet" type="text/css" href="{% static 'clickpicker/dist/picker.min.css' %}">
+
+{%endblock css_block%}
+
+{% block body_content%}
+
+
+<div class="container">
+    <!-- 警告信息 -->
+    {% for item in warn_info%}
+        <div class="alert alert-warning" role="alert">
+            {{item}}
+        </div>
+    {% endfor%}
+
+    <!-- 表单 -->
+    <form action="" onsubmit="submit_function()" method="post">
+        {% csrf_token %}
+        <div class="distext">开始时间:</div>
+        <div class="center_css row">
+            <div class="col-5">
+                <div class="input-group clockpicker">
+                    <input readonly name="begintime" type="text" class="form-control time_select" autocomplete="off" required>
+                    <span class="input-group-text bi bi-clock"></span>
+                </div>
+            </div>
+        </div>
+    
+        <div class="distext">结束时间:</div>
+        <div class="center_css row">
+            <div class="col-5">
+                <div class="input-group clockpicker">
+                    <input readonly name="endtime" type="text" class="form-control time_select" autocomplete="off" required>
+                    <span class="input-group-text bi bi-clock"></span>
+                </div>
+            </div>
+        </div>
+    
+    
+        <div class="distext">座位号:</div>
+    
+        <div class="row input-group mb-3 ">
+            <div class="col-11">
+                <input id="seatname_in" name="seatname" type="num" class="form-control"
+                    aria-label="Text input with dropdown button" autocomplete="off" required>
+            </div>
+            <div class="col-1 center_css">
+                <i id="upload_logo" class="bi bi-exclamation-square-fill error_color"></i>
+            </div>
+        </div>
+        <div id="tip"></div>
+    
+    
+        <div class="distext">推进个数:</div>
+        <div class="center_css ">
+            <div class="input-group">
+                <input name="pushnum" type="number" class="form-control" oninput="if(value>30)value=30;if(value<0)value=1"
+                    required autocomplete="off">
+                <button type="button" class="input-group-text bi bi-question-circle " data-bs-toggle="tooltip"
+                    data-bs-placement="top" title="如果您选择的座位被占,系统将会向后推进一部分尝试预约,这里填写推进座位的范围">
+                </button>
+            </div>
+        </div>
+        <div class="row">
+            <div class="distext col-4">预约日期:</div>
+            <div class="distext col-3"></div>
+            <div class="distext col-5">自动签到:</div>
+        </div>
+    
+        <div class="row">
+            <div class="col-1"></div>
+            <div class="form-check col-3 center_css">
+                <input class="form-check-input" type="radio" name="is_today" id="today" value="True">
+                <label class="form-check-label" for="exampleRadios1">
+                    &nbsp;今天
+                </label>
+            </div>
+            <div class="form-check col-3 center_css ">
+                <input class="form-check-input" type="radio" name="is_today" id="tomorrow" value="False" checked>
+                <label class="form-check-label" for="exampleRadios2">
+                    &nbsp;明天
+                </label>
+            </div>
+            <div class="distext col-3"></div>
+            <div class="form-check col-2">
+                <input name="is_auto" class="form-check-input" type="checkbox" value="True" id="flexCheckDefault">
+                <label class="form-check-label"">
+                    是
+                </label>
+            </div>
+            </div>
+            <input name = "process_poll_key" id = "process_poll_key" type = "hidden" value="{{input_lable}}">
+            <div class=" center_css border_submit">
+                    <input id="upload_sub" type="submit" class="button_one_click  btn btn-lg btn-outline-success" value = '开始预约' disabled></input>
+            </div>
+    
+    </form>
+
+
+    <!-- 历史记录 -->
+    {% autoescape off %}
+    <p class="distext">历史记录</p>
+    <div class="history_list">
+        <div class="list-group">
+            <button disable class="list-group-item list-group-item-action">
+                <div class="row">
+                    <div class="col-3 center_css">座位</div>
+                    <div class="col-4 center_css">起止时间</div>
+                    <div class="col-5 center_css">创建时间</div>
+                </div>
+            </button>
+            {% for i in history%}
+            <button function_flag="{{i}}" class="list-group-item list-group-item-action history_click" id="history_click">
+                <div class="row">
+                    <div class="col-3 center_css">{{i.seatname}}</div>
+                    <div class="col-4 center_css">{{i.begintimestr}}~{{i.endtimestr}}</div>
+                    <div class="col-5 center_css">{{i.creat_time}}</div>
+                </div>
+            </button>
+    
+            {% empty %}
+            <button disable class="list-group-item list-group-item-action">
+                <div class="center_css">空空如也</div>
+            </button>
+            {% endfor %}
+        </div>
+    </div>
+    {% endautoescape %}
+
+
+
+
+    <!-- 快速预约结果弹窗 -->
+    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1"
+        aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5>预约结果</h5>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-5">
+                            <div id="tip">创建:{{username}}</div>
+                        </div>
+                        <div class="col-5">
+                            <div id="tip">创建时间:{{creattime}}</div>
+                        </div>
+                        <div class="col-1 clearfix">
+                            <i id="modal_status_error" class="bi bi-exclamation-square-fill error_color" hidden></i>
+                            <i id="modal_status_check" class="bi bi-check-square-fill check_color" hidden></i>
+                            <div id="modal_status_loading" class="spinner-border spinner-border-sm text-primary float-end"
+                                role="status"></div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-5">
+                            <div id="tip" class = "text_result">结果:loading...</div>
+                        </div>
+                        <div class="col-7">
+                            <div id="tip" class = "text_note">备注:loading...</div>
+                        </div>
+                        <div id="tip" class="col-12">预约记录：</div>
+                    </div>
+    
+                    <div class="row">
+                        <div class="col-1"></div>
+                        <div class="col-11">
+                            <div id="scroll_height" data-bs-spy="scroll" data-bs-target="#list-example" data-bs-offset="0"
+                                class="scrollspy-example" tabindex="0">
+    
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" onclick="hide_modal(this)" class="btn btn-primary">关闭</button>
+                </div>
+            </div>
+        </div>
+    
+    </div>
+</div>
+
+
+
+
+
+<!-- ClockPicker script -->
+<script type="text/javascript" src="{% static 'clickpicker/dist/picker.min.js' %}"></script>
+<script type="text/javascript" src="{% static '/seatlist.js' %}"></script>    
+<script type="text/javascript">
+
+
+    // 提交按钮-实时检查座位号输入正确性
+    $("#seatname_in").bind("input propertychange",function(event){
+        var value = $("#seatname_in").val();
+        if(Check_SeatName(value) == -1){
+            // 未查到
+            $("#upload_logo").removeClass("check_color");
+            $("#upload_logo").removeClass("bi-check-square-fill");
+            $("#upload_logo").addClass("error_color");
+            $("#upload_logo").addClass("bi-exclamation-square-fill");
+            $("#upload_sub").attr("disabled","disabled");
+            $("#tip").html("座位号错误,注意使用小写字符")
+        }
+        else{
+
+            // 查到
+            $("#upload_logo").addClass("check_color");
+            $("#upload_logo").addClass("bi-check-square-fill");
+            $("#upload_logo").removeClass("error_color");
+            $("#upload_logo").removeClass("bi-exclamation-square-fill");
+            $("#upload_sub").removeAttr("disabled");
+            $("#tip").html("")
+            
+        }
+    });
+
+    var ajax_loop
+    
+    function seatprocess() {
+    // 进度请求函数调用
+        
+        req();
+        ajax_loop = setInterval(function() {isLoaded && req();}, 1000);	// 每1S 调用一次,语句利用逻辑短路 
+    }
+
+    // 进度请求函数
+    var isLoaded = false;           // 用来防止预约堆积
+    var error_count = 0;            // 用来计数,三次请求不到为网络故障
+    function req() {
+        var lable_value = document.getElementById("process_poll_key").value
+        console.log(lable_value)
+        $.ajax({
+            type: 'get',
+            url: '../seatprocess/',
+            dataType: 'json',
+            data: {
+                    "input_lable": lable_value
+                },
+            beforeSend: function() {
+                // 发送之前调用
+                isLoaded = false;
+                
+            },
+            success: function(res) {
+                console.log(res)
+                //调用成功
+                // 更新字符
+                if( res.statue != 1){
+                    error_count = error_count + 1;
+                }
+                else{
+                    var add_father = document.getElementById("scroll_height");
+                    add_father.innerHTML = "";              // 移出子标签
+                    for (let i = 0; i < res.content.content.length; ++i) {
+                        var new_label = document.createElement("div");
+                        new_label.setAttribute("id","tip");
+                        new_label.innerHTML = res.content.content[i];
+                        add_father.appendChild(new_label);
+                    }
+                    // 判断是否完成
+                    if( res.content.complete ){
+                    
+                        // 预约完成
+                        // 判断是否预约到
+                        if( res.content.statues ){
+                            // 预约到座位
+                            console.log("success")
+                            $("[id=modal_status_loading]").attr("hidden","hidden")
+                            $("[id=modal_status_error]").attr("hidden","hidden")
+                            $("[id=modal_status_check]").removeAttr("hidden")
+                            $(".text_result").text("结果 : 成功")
+                            $(".text_note").text("备注 : "+res.content.result)
+                        }
+                        else{
+                            // 没有预约到
+                            $("[id=modal_status_loading]").attr("hidden","hidden")
+                            $("[id=modal_status_error]").removeAttr("hidden")
+                            $("[id=modal_status_check]").attr("hidden","hidden")
+                            $(".text_result").text("结果 : 失败")
+                            $(".text_note").text("备注 : "+res.content.result)
+                        }
+                        // 停止ajax循环
+                        clearInterval(ajax_loop)
+                    }
+                }
+                
+            },
+            
+            complete: function() {
+                // 调用完成
+                isLoaded = true;
+                // 网络故障判定
+                if (error_count > 7){
+                    // 停止ajax循环
+                    // 设定网络失败
+                    $("[id=modal_status_loading]").attr("hidden","hidden")
+                    $("[id=modal_status_error]").removeAttr("hidden")
+                    $("[id=modal_status_check]").attr("hidden","hidden")
+                    $(".text_result").text("结果 : 失败")
+                    $(".text_note").text("备注 : 网络错误")
+                    // 设定日志
+                    var add_father = document.getElementById("scroll_height");
+                    add_father.innerHTML = "";              // 移出子标签
+                    var new_label = document.createElement("div");
+                    new_label.setAttribute("id","tip");
+                    new_label.innerHTML = "&nbsp;&nbsp;网络出错,预约结果请在微信聊天中查看。如果长时间没有回复消息,请联系管理员。";
+                    add_father.appendChild(new_label);
+                    clearInterval(ajax_loop)
+                }
+            },
+            
+            error: function() {
+                // 调用失败
+                error_count = error_count + 1;
+            }
+        });
+    }
+
+
+    $(document).ready(function(){
+        // 弹出预约结果,并且调用进度请求函数
+        {{ show_model | safe }}             // 展示模态框
+        {{ seat_process | safe }}           // 运行座位预约程序
+        
+        //历史记录展示
+        $("button[id=history_click]").click(function(){
+            var get_button_dict = $(this).attr("function_flag");
+            get_button_dict = get_button_dict.replace(/\'/g,"\"")
+            get_button_dict = get_button_dict.replace(/True/g,"true")
+            get_button_dict = get_button_dict.replace(/False/g,"false")
+            get_button_dict = JSON.parse(get_button_dict);
+            $("[name=begintime]").val(get_button_dict.begintimestr);
+            $("[name=endtime]").val(get_button_dict.endtimestr);
+            $("[name=seatname]").val(get_button_dict.seatname);
+            $("[name=pushnum]").val(get_button_dict.pushnum);
+            if (get_button_dict.auto_reserve){
+                $("[name=is_auto]").attr("checked","checked")
+            }
+            else{
+                $("[name=is_auto]").removeAttr("checked")
+            }
+            if(get_button_dict.is_today){
+                
+                $("[id=today]").removeAttr("checked")
+                $("[id=tomorrow]").removeAttr("checked")
+                $("[id=today]").attr("checked","checked")
+            }
+            else{
+               
+                $("[id=today]").removeAttr("checked")
+                $("[id=tomorrow]").removeAttr("checked")
+                $("[id=tomorrow]").attr("checked","checked")
+            }
+            
+            $("#upload_logo").addClass("check_color");
+            $("#upload_logo").addClass("bi-check-square-fill");
+            $("#upload_logo").removeClass("error_color");
+            $("#upload_logo").removeClass("bi-exclamation-square-fill");
+            $("#upload_sub").removeAttr("disabled");
+            $("#tip").html("")
+        });
+    });
+
+    // 防止重复点击
+    function submit_function(){
+        $('#upload_sub').attr("disabled",true)
+    }
+
+    // 隐藏modal,刷新界面
+    function hide_modal() {
+        window.location.replace("../fast/");
+    }
+
+    // 推进个数弹出详情
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    })
+
+    //时钟选择
+    // 时钟选择
+    new Picker(document.querySelector('[name = "begintime"]'), {
+        format: 'HH:mm',
+        headers: true,
+        text: {
+            title: '开始时间',
+        },
+    });
+    new Picker(document.querySelector('[name = "endtime"]'), {
+        format: 'HH:mm',
+        headers: true,
+        text: {
+            title: '结束时间',
+        },
+    });
+
+    
+
+</script>
+
+
+
+{% endblock body_content%}

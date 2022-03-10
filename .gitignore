@@ -1,0 +1,12 @@
+/library/DB
+/library/note.md
+/library/utils/user_setting.py
+/library/library/settings.py
+/library/library/static/silk
+/library/library/static/admin
+
+library/log/collect.txt
+library/log/Log_default.txt
+library/log/Log_error.txt
+*.pyc
+library/Core/migrations/0001_initial.py

@@ -1,0 +1,175 @@
+{% extends "templates/navigation.html" %}
+{% load static %}
+{% block title %} AHNU图书馆助手-用户{%endblock%}
+
+
+{% block css_block %}
+<script src="https://cdn.jsdelivr.net/npm/clipboard@2/dist/clipboard.min.js"></script>
+<style>
+  .displayimg {
+    width: 300px;
+    clear: both;
+    display: block;
+    margin: auto;
+  }
+</style>
+{%endblock css_block%}
+
+
+{% block body_content%}
+<div class="container">
+  <!-- 警告消息 -->
+  {% for item in warn_info%}
+  <div class="alert alert-warning" role="alert">
+    {{item}}
+  </div>
+  {% endfor%}
+
+  <!-- 账号密码检测 -->
+  <div class="block">
+    <div class="mb-3 row">
+      <label for="staticEmail" class="distext col-sm-2 col-form-label">账号</label>
+      <div class="col-sm-10">
+        <input type="text" readonly class="form-control" value="{{ display_username }} ">
+      </div>
+    </div>
+    <div class="mb-3 row">
+      <label for="inputPassword" class="distext col-sm-2 col-form-label">密码</label>
+      <div class="col-sm-10">
+        <div class="input-group mb-3">
+          <input type="text" readonly class="form-control" value="{{ display_password }}">
+          <button class="btn btn-outline-secondary" type="button" id="password_button" data-bs-toggle="modal"
+            data-bs-target="#display_password">修改</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <hr>
+
+  <!-- 微信用户绑定信息 -->
+  <div class="block">
+    <p class="distext">微信用户绑定</p>
+    <div class="input-group mb-3">
+      <input type="text" readonly class="form-control" value="{{ display_WXID }}">
+      <button class="btn btn-outline-secondary" type="button" id="wxname_button" data-bs-toggle="modal"
+        data-bs-target="#display_wxname">修改</button>
+    </div>
+  </div>
+
+
+  <hr>
+
+  <!-- 功能按钮 -->
+  <p class="distext">注销</p>
+  <div class="center_css">
+    <button type="button" class="btn btn-primary center_css" data-bs-toggle="modal" data-bs-target="#logout">注销</button>
+  </div>
+
+
+  <hr>
+  <!-- 功能按钮 -->
+  <p class="distext">删除用户</p>
+  <div class="center_css">
+    <button type="button" class="btn btn-danger btn-sm" data-bs-toggle="modal" data-bs-target="#delete">删除用户</button>
+  </div>
+
+  <!-- 弹窗-登出 -->
+  <div class="modal fade" id="logout" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="Modal">登出</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>&nbsp; &nbsp; &nbsp; &nbsp; 确定要注销登录</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <a href="../logout">
+            <button id="seatname_check" type="button" class="btn btn-primary">确定</button>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗-删除用户 -->
+  <div class="modal fade" id="delete" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="Modal">删除用户</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>&nbsp; &nbsp; &nbsp; &nbsp; 您确定要删除本用户</p>
+          <p>&nbsp; &nbsp; &nbsp; &nbsp; 删除之后您的所有信息包括:图书馆用户信息、微信绑定信息、预约信息都将被彻底删除。</p>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">取消</button>
+          <form action="../delete/" method="post">
+            {% csrf_token %}
+            <button id="seatname_check" type="submit" class="btn btn-primary btn-danger">删除</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 弹窗-密码 -->
+  <div class="modal fade" id="display_password" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="Modal">修改图书馆用户密码</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>&nbsp; &nbsp; &nbsp; &nbsp; 用户密码在每次登陆时都会自动检验并修改，无需手动更改。</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 弹窗-微信连接 -->
+  <div class="modal fade" id="display_wxname" tabindex="-1" aria-labelledby="Modal" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="Modal">连接微信</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <p>&nbsp; &nbsp; 为了确保您不会忘记本系统在帮您自动预约图书馆座位,系统会通过微信的方式向您发送通知。</p>
+          <p>&nbsp; &nbsp; 绑定方式:请将窗口给的代码完全复制并发送给下图的微信账号。如果您在使用期间删除好友那么系统将会停止按周预约任务。</p>
+
+          <div class="input-group mb-3">
+            <input id="copyinput" type="text" readonly class="form-control" value="{{ display_UUID }}">
+            <button id="copy-wechat-btn" class="btn btn-outline-secondary" type="button"
+              data-clipboard-target="#copyinput">复制</button>
+          </div>
+          <p>微信号</p>
+          <img class="displayimg" src="{% static '/image/WX_Friend.jpg' %}" alt="">
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script type="text/javascript">
+  // 复制操作
+  $('#copy-wechat-btn').on('click', function () {
+    var clipboard = new ClipboardJS('#copy-wechat-btn');
+    clipboard.on('success', function (e) {
+      alter("复制成功")
+    });
+    clipboard.on('error', function (e) {
+      alter("复制失败")
+    });
+  })
+</script>
+{%endblock body_content%}
