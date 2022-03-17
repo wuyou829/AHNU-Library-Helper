@@ -485,7 +485,7 @@ class Run_SignIn:
 
         except Exception as er:
             self.status = -1
-            self.infolog = "Request请求异常:" +  str(repr(e))
+            self.infolog = "Request请求异常:" +  str(repr(er))
 
     def access(self):
         # 访问
